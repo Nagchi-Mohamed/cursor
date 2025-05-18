@@ -1,0 +1,24 @@
+{
+  "queryresult": {
+    "success": false,
+    "numpods": 0,
+    "datatypes": "",
+    "timedout": "",
+    "timedoutpods": "",
+    "timing": 0.02,
+    "parsetiming": 0,
+    "parsetimedout": false,
+    "recalculate": "",
+    "id": "",
+    "parseidserver": "10",
+    "host": "https://www6b3.wolframalpha.com",
+    "server": "10",
+    "related": "",
+    "version": "2.6",
+    "inputstring": "\\sin^2(x) + \\cos^2(x)",
+    "error": {
+      "code": "1",
+      "msg": "Invalid appid"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "queryresult": {
+    "success": false,
+    "numpods": 0,
+    "datatypes": "",
+    "timedout": "",
+    "timedoutpods": "",
+    "timing": 0.017,
+    "parsetiming": 0,
+    "parsetimedout": false,
+    "recalculate": "",
+    "id": "",
+    "parseidserver": "2",
+    "host": "https://www6b3.wolframalpha.com",
+    "server": "2",
+    "related": "",
+    "version": "2.6",
+    "inputstring": "volume of sphere radius 3",
+    "error": {
+      "code": "1",
+      "msg": "Invalid appid"
+    }
+  }
+}

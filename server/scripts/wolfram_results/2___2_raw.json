@@ -1,0 +1,24 @@
+{
+  "queryresult": {
+    "success": false,
+    "numpods": 0,
+    "datatypes": "",
+    "timedout": "",
+    "timedoutpods": "",
+    "timing": 0.018000000000000002,
+    "parsetiming": 0,
+    "parsetimedout": false,
+    "recalculate": "",
+    "id": "",
+    "parseidserver": "20",
+    "host": "https://www6b3.wolframalpha.com",
+    "server": "20",
+    "related": "",
+    "version": "2.6",
+    "inputstring": "2 + 2",
+    "error": {
+      "code": "1",
+      "msg": "Invalid appid"
+    }
+  }
+}

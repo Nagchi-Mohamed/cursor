@@ -1,0 +1,16 @@
+{
+  "name": "mathsphere-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:client": "npm start --prefix client",
+    "start:server": "npm start --prefix server",
+    "start": "concurrently \"npm start --prefix client\" \"npm start --prefix server\"",
+    "test:client": "npm test --prefix client",
+    "test:server": "npm test --prefix server",
+    "test": "concurrently \"npm test --prefix client\" \"npm test --prefix server\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.1"
+  }
+}

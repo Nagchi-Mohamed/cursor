@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Grid -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="600" fill="url(#grid)"/>
+  
+  <!-- Mathematical Symbols and Formulas -->
+  <g fill="white" font-family="Arial" font-size="24">
+    <!-- Quadratic Formula -->
+    <text x="100" y="100" opacity="0.8">x = -b ± √(b² - 4ac) / 2a</text>
+    
+    <!-- Pythagorean Theorem -->
+    <text x="500" y="200" opacity="0.7">a² + b² = c²</text>
+    
+    <!-- Pi -->
+    <text x="200" y="300" font-size="48" opacity="0.9">π</text>
+    
+    <!-- Integral Symbol -->
+    <text x="400" y="400" font-size="72" opacity="0.8">∫</text>
+    
+    <!-- Sum Symbol -->
+    <text x="600" y="300" font-size="48" opacity="0.7">∑</text>
+  </g>
+  
+  <!-- Geometric Shapes -->
+  <g stroke="white" fill="none" opacity="0.6">
+    <!-- Triangle -->
+    <path d="M 150 450 L 250 350 L 350 450 Z" stroke-width="2"/>
+    
+    <!-- Circle -->
+    <circle cx="500" cy="450" r="50" stroke-width="2"/>
+    
+    <!-- Square -->
+    <rect x="600" y="400" width="100" height="100" stroke-width="2"/>
+  </g>
+  
+  <!-- Decorative Lines -->
+  <g stroke="white" opacity="0.4">
+    <line x1="0" y1="150" x2="800" y2="150" stroke-width="1"/>
+    <line x1="0" y1="450" x2="800" y2="450" stroke-width="1"/>
+  </g>
+</svg> 
