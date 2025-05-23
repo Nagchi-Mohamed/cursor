@@ -16,7 +16,12 @@ exports.createPracticeSet = async (req, res) => {
     });
 
     await practiceSet.save();
-    res.status(201).json(practiceSet);
+    res.status(201).json({
+      status: 'success',
+      data: {
+        practiceSet
+      }
+    });
   } catch (error) {
     console.error('Create practice set error:', error);
     res.status(500).json({ message: 'Server error' });

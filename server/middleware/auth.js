@@ -12,8 +12,9 @@ const catchAsync = require('../utils/catchAsync');
 const protect = catchAsync(async (req, res, next) => {
   // 1) Get token and check if it exists
   let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+  const authHeader = req.header('authorization');
+  if (authHeader && authHeader.startsWith('Bearer')) {
+    token = authHeader.split(' ')[1];
   }
 
   if (!token) {
@@ -27,6 +28,16 @@ const protect = catchAsync(async (req, res, next) => {
   const user = await User.findById(decoded.userId);
   if (!user) {
     return next(new ApiError('User no longer exists.', 401));
+  }
+
+  // Check if user is banned
+  if (user.isBanned) {
+    return next(new ApiError('Your account has been banned. Please contact support.', 403));
+  }
+
+  // Check if user is inactive
+  if (!user.isActive) {
+    return next(new ApiError('Your account is inactive. Please contact support.', 403));
   }
 
   // 4) Check if user changed password after the token was issued
@@ -49,7 +60,9 @@ const protect = catchAsync(async (req, res, next) => {
 
 const isAdmin = catchAsync(async (req, res, next) => {
   if (req.user.role !== 'admin') {
-    return next(new ApiError('Access denied. Admin privileges required.', 403));
+    return next(
+      new ApiError(403, 'You do not have permission to perform this action')
+    );
   }
   next();
 });
@@ -69,8 +82,9 @@ const isEditorOrAdmin = catchAsync(async (req, res, next) => {
  */
 const optionalAuth = catchAsync(async (req, res, next) => {
   try {
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      const token = req.headers.authorization.split(' ')[1];
+    const authHeader = req.header('authorization');
+    if (authHeader && authHeader.startsWith('Bearer')) {
+      const token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.userId);
       

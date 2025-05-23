@@ -1,196 +1,391 @@
-// IMPORTANT: Axios mock must be at the very top, before any imports,
-// to ensure it's applied before any module (including those in test-utils or contexts)
-// might import and use axios.
-const mockAxiosInstance = {
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
-  defaults: { headers: { common: {} } },
-  interceptors: {
-    request: { use: jest.fn(), eject: jest.fn() },
-    response: { use: jest.fn(), eject: jest.fn() }
-  }
-};
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
+import SolverPage from '../SolverPage';
+import * as solverService from '../../services/SolverService';
+import * as historyService from '../../services/HistoryService';
 
-const mockCreate = jest.fn(() => mockAxiosInstance);
-jest.mock('axios', () => ({
-  create: mockCreate,
-  get: jest.fn(), // General axios.get mock if used directly
-  post: jest.fn() // General axios.post mock if used directly
-}));
-
-// Mock solverService before importing it
+// Mock services with TypeScript-like typing via JSDoc
+/**
+ * @type {jest.Mocked<typeof solverService>}
+ */
 jest.mock('../../services/SolverService', () => ({
   solveProblem: jest.fn(),
-  uploadImage: jest.fn(),
-  processAudio: jest.fn()
+  processImage: jest.fn(),
+  processVoiceInput: jest.fn(),
 }));
 
-import React from 'react';
-// Ensure your custom render is used if SolverPage relies on its providers
-import { render, screen, fireEvent, waitFor } from '../../utils/test-utils'; 
-import SolverPage from '../SolverPage';
-import { mockMediaRecorder } from '../../utils/test-utils'; // Assuming this is correctly set up
-import * as solverService from '../../services/SolverService';
-
-// Mock the media recorder
-global.MediaRecorder = jest.fn().mockImplementation(() => mockMediaRecorder);
-
-// Mock translations specific to SolverPage or use a shared translations mock
-const solverTestTranslations = {
-  'solver.inputPlaceholder': 'Type or paste your math problem here',
-  'solver.inputLabel': 'Math Problem',
-  'solver.solve': 'Solve',
-  'solver.uploadImage': 'Upload Image',
-  'solver.startRecording': 'Start Recording',
-  'solver.stopRecording': 'Stop Recording',
-  'solver.error': 'Error solving problem',
-  'solver.loginRequired': 'Please log in to save solutions'
-};
-
-// Mock the language context hook
-let mockUseLanguageImpl;
-jest.mock('../../contexts/LanguageContext', () => ({
-  ...jest.requireActual('../../contexts/LanguageContext'), // Keep original exports like Provider if not fully mocking
-  useLanguage: () => mockUseLanguageImpl,
+/**
+ * @type {jest.Mocked<typeof historyService>}
+ */
+jest.mock('../../services/HistoryService', () => ({
+  getHistory: jest.fn(),
 }));
 
-// Mock the auth context hook
-let mockUseAuthImpl;
+// Mock contexts with realistic defaults
 jest.mock('../../contexts/AuthContext', () => ({
-  ...jest.requireActual('../../contexts/AuthContext'), // Keep original exports like Provider
-  useAuth: () => mockUseAuthImpl,
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { name: 'Test User', id: 'user-123' },
+    logout: jest.fn(),
+    token: 'mock-token'
+  })
+}));
+
+jest.mock('../../contexts/LanguageContext', () => ({
+  useLanguage: () => ({
+    t: (key) => key,
+    language: 'en',
+    setLanguage: jest.fn()
+  })
 }));
 
 describe('SolverPage Component', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Setup default mock implementations for hooks
-    mockUseLanguageImpl = { // Note: assign the object directly
-      language: 'en',
-      setLanguage: jest.fn(),
-      t: (key) => solverTestTranslations[key] || key
-    };
+  const user = userEvent.setup();
+  let originalConsoleError;
 
-    mockUseAuthImpl = { // Note: assign the object directly
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      login: jest.fn(),
-      signup: jest.fn(),
-      logout: jest.fn()
-    };
-
-    // Reset service mocks
-    solverService.solveProblem.mockReset();
-    solverService.uploadImage.mockReset();
-    solverService.processAudio.mockReset();
-    
-    // Reset axios instance mocks
-    mockAxiosInstance.get.mockReset();
-    mockAxiosInstance.post.mockReset();
-    mockCreate.mockClear(); 
+  beforeAll(() => {
+    originalConsoleError = console.error;
+    console.error = jest.fn(); // Suppress React error logs
   });
 
   afterAll(() => {
-    jest.restoreAllMocks();
+    console.error = originalConsoleError;
   });
 
-  // Using the customRender from test-utils which should include all necessary providers
-  const renderSolverPage = (ui = <SolverPage />, options = {}) => {
-    return render(ui, options);
-  };
-
-  test('renders solver form with all elements', () => {
-    renderSolverPage();
-
-    expect(screen.getByLabelText(solverTestTranslations['solver.inputLabel'])).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(solverTestTranslations['solver.inputPlaceholder'])).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: solverTestTranslations['solver.solve'] })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: solverTestTranslations['solver.uploadImage'] })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: solverTestTranslations['solver.startRecording'] })).toBeInTheDocument();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    solverService.solveProblem.mockResolvedValue({ solution: '42' });
+    historyService.getHistory.mockResolvedValue({ history: [] });
   });
 
-  test('shows login required message when not authenticated', () => {
-    renderSolverPage();
-    expect(screen.getByText(solverTestTranslations['solver.loginRequired'])).toBeInTheDocument();
-  });
-
-  test('handles solve button click', async () => {
-    solverService.solveProblem.mockResolvedValueOnce({ solution: 'x = 5' });
-    renderSolverPage();
-    
-    const input = screen.getByLabelText(solverTestTranslations['solver.inputLabel']);
-    const solveButton = screen.getByRole('button', { name: solverTestTranslations['solver.solve'] });
-    
-    fireEvent.change(input, { target: { value: '2x + 3 = 13' } });
-    fireEvent.click(solveButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('x = 5')).toBeInTheDocument();
+  describe('Core Functionality', () => {
+    it('renders all critical UI elements', () => {
+      render(<SolverPage />);
+      
+      expect(screen.getByRole('heading', { name: /solver\.title/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/solver\.inputLabel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('solve-button')).toBeInTheDocument();
+      expect(screen.getByTestId('image-upload-button')).toBeInTheDocument();
+      expect(screen.getByTestId('record-button')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /actions\.toggleHistory/i })).toBeInTheDocument();
     });
-    expect(solverService.solveProblem).toHaveBeenCalledWith('2x + 3 = 13', expect.any(Object));
+
+    it('solves text input problems and displays solution', async () => {
+      render(<SolverPage />);
+      const input = screen.getByLabelText(/solver\.inputLabel/i);
+      const button = screen.getByTestId('solve-button');
+
+      await user.type(input, 'What is 6 × 7?');
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(solverService.solveProblem).toHaveBeenCalledWith(
+          { input: 'What is 6 × 7?', inputType: 'text' },
+          'mock-token'
+        );
+        expect(screen.getByText('42')).toBeInTheDocument();
+        expect(screen.getByTestId('solution-display')).toBeInTheDocument();
+      });
+    });
+
+    it('disables solve button when input is empty', () => {
+      render(<SolverPage />);
+      expect(screen.getByTestId('solve-button')).toBeDisabled();
+    });
   });
 
-  test('handles image upload and displays extracted text', async () => {
-    const mockExtractedText = '2x + 3 = 7 from image';
-    solverService.uploadImage.mockResolvedValueOnce({ text: mockExtractedText });
-    renderSolverPage();
-    
-    const uploadInput = screen.getByTestId('image-upload-input');
-    const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
+  describe('Error Handling', () => {
+    it('shows error when problem solving fails', async () => {
+      solverService.solveProblem.mockRejectedValue(new Error('API Error'));
+      render(<SolverPage />);
 
-    fireEvent.change(uploadInput, { target: { files: [file] } });
-    
-    await waitFor(() => {
-      expect(screen.getByLabelText(solverTestTranslations['solver.inputLabel'])).toHaveValue(mockExtractedText);
+      await user.type(screen.getByLabelText(/solver\.inputLabel/i), 'Fail case');
+      await user.click(screen.getByTestId('solve-button'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+        expect(screen.getByText(/errors\.solvingFailed/i)).toBeInTheDocument();
+      });
     });
-    expect(solverService.uploadImage).toHaveBeenCalledWith(expect.any(FormData));
+
+    it('maintains input after failed submission', async () => {
+      solverService.solveProblem.mockRejectedValue(new Error('API Error'));
+      render(<SolverPage />);
+      const input = screen.getByLabelText(/solver\.inputLabel/i);
+      
+      await user.type(input, 'Persistent input');
+      await user.click(screen.getByTestId('solve-button'));
+      
+      await waitFor(() => {
+        expect(input).toHaveValue('Persistent input');
+      });
+    });
+
+    it('shows loading state during async operations', async () => {
+      solverService.solveProblem.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve({ solution: '42' }), 500))
+      );
+      
+      render(<SolverPage />);
+      await user.type(screen.getByLabelText(/solver\.inputLabel/i), '1+1');
+      await user.click(screen.getByTestId('solve-button'));
+      
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
+    });
   });
 
-  test('handles recording functionality and displays transcribed text', async () => {
-    const mockTranscribedText = 'solve for x: 2x + 3 = 7 from audio';
-    solverService.processAudio.mockResolvedValueOnce({ text: mockTranscribedText });
-    
-    mockMediaRecorder.start.mockImplementation(() => {
-      if (mockMediaRecorder.onstart) mockMediaRecorder.onstart();
+  describe('Image Processing', () => {
+    it('processes image uploads and populates input', async () => {
+      const file = new File(['dummy'], 'equation.png', { type: 'image/png' });
+      solverService.processImage.mockResolvedValue({ latex: 'x^2 + y^2 = z^2' });
+      
+      render(<SolverPage />);
+      const uploadInput = screen.getByTestId('image-upload-input-hidden');
+      
+      fireEvent.change(uploadInput, { target: { files: [file] } });
+      
+      await waitFor(() => {
+        expect(solverService.processImage).toHaveBeenCalledWith(file, 'mock-token');
+        expect(screen.getByLabelText(/solver\.inputLabel/i)).toHaveValue('x^2 + y^2 = z^2');
+      });
     });
-    mockMediaRecorder.stop.mockImplementation(() => {
-      const mockBlob = new Blob(['audio data'], { type: 'audio/webm' });
-      if (mockMediaRecorder.ondataavailable) {
-        mockMediaRecorder.ondataavailable({ data: mockBlob });
+
+    it('shows error when image processing fails', async () => {
+      const file = new File(['dummy'], 'equation.png', { type: 'image/png' });
+      solverService.processImage.mockRejectedValue(new Error('Processing failed'));
+      
+      render(<SolverPage />);
+      fireEvent.change(
+        screen.getByTestId('image-upload-input-hidden'), 
+        { target: { files: [file] } }
+      );
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+        expect(screen.getByText(/errors\.imageProcessingFailed/i)).toBeInTheDocument();
+      });
+    });
+
+    it('rejects invalid file types', async () => {
+      const file = new File(['dummy'], 'document.pdf', { type: 'application/pdf' });
+      
+      render(<SolverPage />);
+      fireEvent.change(
+        screen.getByTestId('image-upload-input-hidden'), 
+        { target: { files: [file] } }
+      );
+      
+      await waitFor(() => {
+        expect(solverService.processImage).not.toHaveBeenCalled();
+        expect(screen.getByText(/errors\.invalidFileType/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Voice Processing', () => {
+    beforeAll(() => {
+      // Mock MediaRecorder API
+      global.MediaRecorder = jest.fn().mockImplementation(() => ({
+        start: jest.fn(),
+        stop: jest.fn(),
+        state: 'inactive',
+        ondataavailable: null,
+        onerror: null
+      }));
+
+      global.navigator.mediaDevices = {
+        getUserMedia: jest.fn().mockResolvedValue({
+          getTracks: () => [{ stop: jest.fn() }]
+        })
+      };
+    });
+
+    it('handles voice recording flow', async () => {
+      solverService.processVoiceInput.mockResolvedValue({ text: 'Solve for x' });
+      render(<SolverPage />);
+
+      await user.click(screen.getByTestId('record-button')); // Start
+      expect(MediaRecorder).toHaveBeenCalled();
+      
+      await user.click(screen.getByTestId('record-button')); // Stop
+      
+      await waitFor(() => {
+        expect(screen.getByLabelText(/solver\.inputLabel/i)).toHaveValue('Solve for x');
+      });
+    });
+
+    it('shows error when voice processing fails', async () => {
+      solverService.processVoiceInput.mockRejectedValue(new Error('Transcription failed'));
+      render(<SolverPage />);
+
+      await user.click(screen.getByTestId('record-button')); // Start
+      await user.click(screen.getByTestId('record-button')); // Stop
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+        expect(screen.getByText(/errors\.voiceProcessingFailed/i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles microphone permission denial', async () => {
+      global.navigator.mediaDevices.getUserMedia.mockRejectedValue(
+        new Error('Permission denied')
+      );
+      
+      render(<SolverPage />);
+      await user.click(screen.getByTestId('record-button'));
+      
+      await waitFor(() => {
+        expect(screen.getByText(/errors\.microphoneAccessDenied/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('History Integration', () => {
+    const mockHistory = [
+      {
+        _id: '1',
+        problem: '2+2',
+        solution: '4',
+        createdAt: new Date().toISOString()
+      },
+      {
+        _id: '2',
+        problem: '3×3',
+        solution: '9',
+        createdAt: new Date().toISOString()
       }
-      if (mockMediaRecorder.onstop) mockMediaRecorder.onstop();
+    ];
+
+    it('loads and displays history items', async () => {
+      historyService.getHistory.mockResolvedValue({ history: mockHistory });
+      render(<SolverPage />);
+      
+      await user.click(screen.getByRole('button', { name: /actions\.toggleHistory/i }));
+      
+      await waitFor(() => {
+        expect(screen.getByText('2+2')).toBeInTheDocument();
+        expect(screen.getByText('4')).toBeInTheDocument();
+        expect(screen.getByText('3×3')).toBeInTheDocument();
+        expect(screen.getByText('9')).toBeInTheDocument();
+      });
     });
 
-    renderSolverPage();
-    
-    const recordButton = screen.getByRole('button', { name: solverTestTranslations['solver.startRecording'] });
-    fireEvent.click(recordButton);
-
-    const stopButton = await screen.findByRole('button', { name: solverTestTranslations['solver.stopRecording'] });
-    fireEvent.click(stopButton);
-    
-    await waitFor(() => {
-      expect(screen.getByLabelText(solverTestTranslations['solver.inputLabel'])).toHaveValue(mockTranscribedText);
+    it('populates input from history items', async () => {
+      historyService.getHistory.mockResolvedValue({ history: mockHistory });
+      render(<SolverPage />);
+      
+      await user.click(screen.getByRole('button', { name: /actions\.toggleHistory/i }));
+      await user.click(await screen.findByText('3×3'));
+      
+      expect(screen.getByLabelText(/solver\.inputLabel/i)).toHaveValue('3×3');
     });
-    expect(solverService.processAudio).toHaveBeenCalledWith(expect.any(Blob));
+
+    it('shows error when history loading fails', async () => {
+      historyService.getHistory.mockRejectedValue(new Error('Failed to load'));
+      render(<SolverPage />);
+      
+      await user.click(screen.getByRole('button', { name: /actions\.toggleHistory/i }));
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+        expect(screen.getByText(/errors\.historyLoadFailed/i)).toBeInTheDocument();
+      });
+    });
   });
 
-  test('displays error message if solving problem fails', async () => {
-    solverService.solveProblem.mockRejectedValueOnce(new Error('Network Error'));
-    renderSolverPage();
+  describe('Accessibility', () => {
+    it('has no accessibility violations', async () => {
+      const { container } = render(<SolverPage />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
 
-    const input = screen.getByLabelText(solverTestTranslations['solver.inputLabel']);
-    const solveButton = screen.getByRole('button', { name: solverTestTranslations['solver.solve'] });
-    
-    fireEvent.change(input, { target: { value: 'problem' } });
-    fireEvent.click(solveButton);
+    it('maintains proper keyboard navigation', async () => {
+      render(<SolverPage />);
+      
+      await user.tab();
+      expect(screen.getByLabelText(/solver\.inputLabel/i)).toHaveFocus();
+      
+      await user.tab();
+      expect(screen.getByTestId('solve-button')).toHaveFocus();
+      
+      await user.tab();
+      expect(screen.getByTestId('image-upload-button')).toHaveFocus();
+      
+      await user.tab();
+      expect(screen.getByTestId('record-button')).toHaveFocus();
+    });
 
-    await waitFor(() => {
-      expect(screen.getByText(solverTestTranslations['solver.error'])).toBeInTheDocument();
+    it('provides proper ARIA attributes', () => {
+      render(<SolverPage />);
+      
+      expect(screen.getByRole('heading', { name: /solver\.title/i })).toHaveAttribute('aria-level', '1');
+      expect(screen.getByTestId('solve-button')).toHaveAttribute('aria-busy', 'false');
+      expect(screen.getByTestId('image-upload-button')).toHaveAttribute('aria-label', 'Upload image');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('handles extremely long input', async () => {
+      const longInput = 'x'.repeat(1000);
+      solverService.solveProblem.mockResolvedValue({ solution: 'Processed' });
+      
+      render(<SolverPage />);
+      await user.type(screen.getByLabelText(/solver\.inputLabel/i), longInput);
+      await user.click(screen.getByTestId('solve-button'));
+      
+      await waitFor(() => {
+        expect(solverService.solveProblem).toHaveBeenCalledWith(
+          expect.objectContaining({ input: longInput }),
+          'mock-token'
+        );
+      });
+    });
+
+    it('handles rapid sequential submissions', async () => {
+      solverService.solveProblem.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve({ solution: '42' }), 200)
+      );
+      
+      render(<SolverPage />);
+      await user.type(screen.getByLabelText(/solver\.inputLabel/i), '1+1');
+      
+      // Rapid clicks
+      await user.click(screen.getByTestId('solve-button'));
+      await user.click(screen.getByTestId('solve-button'));
+      await user.click(screen.getByTestId('solve-button'));
+      
+      await waitFor(() => {
+        expect(solverService.solveProblem).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('handles network disconnection during solve', async () => {
+      solverService.solveProblem.mockImplementationOnce(
+        () => new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Network Error')), 100)
+      ).mockResolvedValueOnce({ solution: '42' });
+      
+      render(<SolverPage />);
+      await user.type(screen.getByLabelText(/solver\.inputLabel/i), '1+1');
+      await user.click(screen.getByTestId('solve-button'));
+      
+      // First attempt fails
+      await waitFor(() => {
+        expect(screen.getByTestId('error-alert')).toBeInTheDocument();
+      });
+      
+      // Second attempt succeeds
+      await user.click(screen.getByTestId('solve-button'));
+      await waitFor(() => {
+        expect(screen.getByText('42')).toBeInTheDocument();
+      });
     });
   });
 });

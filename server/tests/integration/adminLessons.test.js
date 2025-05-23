@@ -13,8 +13,7 @@ jest.mock('../../middleware/rateLimiter', () => ({
   solverLimiter: (req, res, next) => next()
 }));
 
-// Mock the protect middleware to bypass authentication in tests
-jest.mock('../../middleware/auth', () => ({
+const authMiddlewareMock = {
   protect: (req, res, next) => {
     req.user = { _id: 'testuserid', role: 'admin' };
     next();
@@ -22,7 +21,9 @@ jest.mock('../../middleware/auth', () => ({
   isAdmin: (req, res, next) => next(),
   isEditorOrAdmin: (req, res, next) => next(),
   optionalAuth: (req, res, next) => next()
-}));
+};
+
+jest.mock('../../middleware/auth', () => authMiddlewareMock);
 
 // Mock multer middleware
 jest.mock('multer', () => {

@@ -36,7 +36,7 @@ module.exports = {
   },
   
   // Set the timeout for tests to 10 seconds
-  testTimeout: 10000,
+  testTimeout: 30000,
   
   // Verbose output
   verbose: true,

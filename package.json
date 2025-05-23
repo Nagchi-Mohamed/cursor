@@ -11,6 +11,10 @@
     "test": "concurrently \"npm test --prefix client\" \"npm test --prefix server\""
   },
   "devDependencies": {
-    "concurrently": "^8.0.1"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "babel-jest": "^29.7.0",
+    "concurrently": "^8.0.1",
+    "identity-obj-proxy": "^3.0.0"
   }
 }

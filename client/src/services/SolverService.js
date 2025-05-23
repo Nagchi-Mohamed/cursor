@@ -10,16 +10,17 @@ const API_URL = '/api/solver';
  * @param {string} problemData.inputType - The type of input ('latex', 'text', 'image')
  * @returns {Promise<AxiosResponse<any>>}
  */
-const solveProblem = (problemData) => {
-  return axios.post(`${API_URL}/query-wolfram`, { query: problemData.input });
+export const solveProblem = async (problemData) => {
+  const response = await axios.post(API_URL + '/query-wolfram', { query: problemData.input });
+  return response.data;
 };
 
 /**
  * Gets the solution history for the current user.
  * @returns {Promise<AxiosResponse<any>>}
  */
-const getHistory = () => {
-  return axios.get(`${API_URL}/history`);
+export const getHistory = () => {
+  return axios.get(API_URL + '/history');
 };
 
 /**
@@ -27,8 +28,8 @@ const getHistory = () => {
  * @param {string} solutionId - The ID of the solution
  * @returns {Promise<AxiosResponse<any>>}
  */
-const getSolution = (solutionId) => {
-  return axios.get(`${API_URL}/solutions/${solutionId}`);
+export const getSolution = (solutionId) => {
+  return axios.get(API_URL + '/solutions/' + solutionId);
 };
 
 /**
@@ -36,7 +37,7 @@ const getSolution = (solutionId) => {
  * @param {File} imageFile - The image file to process
  * @returns {Promise<Object>} The recognized math expression in LaTeX format
  */
-const processImage = async (imageFile) => {
+export const processImage = async (imageFile) => {
   try {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -58,7 +59,7 @@ const processImage = async (imageFile) => {
  * @param {Blob} audioBlob - The audio data to process
  * @returns {Promise<Object>} The recognized math expression in LaTeX format
  */
-const processVoiceInput = async (audioBlob) => {
+export const processVoiceInput = async (audioBlob) => {
   try {
     const formData = new FormData();
     formData.append('audio', audioBlob);
@@ -74,13 +75,3 @@ const processVoiceInput = async (audioBlob) => {
     throw error;
   }
 };
-
-const SolverService = {
-  solveProblem,
-  getHistory,
-  getSolution,
-  processImage,
-  processVoiceInput,
-};
-
-export default SolverService; 

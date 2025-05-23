@@ -4,6 +4,7 @@ import axios from 'axios';
 
 // 1. Create the AuthContext
 const AuthContext = createContext(null);
+export { AuthContext };
 
 // 2. Create the AuthProvider component
 export const AuthProvider = ({ children }) => {

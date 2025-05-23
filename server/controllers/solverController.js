@@ -26,7 +26,7 @@ exports.queryWolframAlpha = async (req, res) => {
             const pods = data.queryresult.pods || [];
             let solution = {
                 input: query,
-                result: null,
+                solution: null,
                 steps: [],
                 plots: [],
                 relatedConcepts: []
@@ -35,7 +35,7 @@ exports.queryWolframAlpha = async (req, res) => {
             // Extract main result
             const resultPod = pods.find(pod => pod.id === 'Result' || pod.primary);
             if (resultPod && resultPod.subpods && resultPod.subpods[0]) {
-                solution.result = resultPod.subpods[0].plaintext || resultPod.subpods[0].img?.src;
+                solution.solution = resultPod.subpods[0].plaintext || resultPod.subpods[0].img?.src;
             }
 
             // Extract step-by-step solution

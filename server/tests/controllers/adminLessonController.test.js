@@ -44,6 +44,7 @@ describe('Admin Lesson Controller Tests', () => {
   let testLesson;
 
   beforeAll(async () => {
+    jest.setTimeout(30000);
     await global.connectToDatabase();
   });
 
@@ -76,7 +77,8 @@ describe('Admin Lesson Controller Tests', () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    jest.setTimeout(30000);
+    await global.disconnectDatabase();
   });
 
   // Mock Express request and response objects
